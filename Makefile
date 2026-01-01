@@ -5,11 +5,12 @@ CC      := $(PREFIX)i686-elf-gcc
 AS      := $(PREFIX)i686-elf-as
 LD      := $(PREFIX)i686-elf-ld
 
-TEST_TRAP ?= 0
+# On Linux this is usually `grub-mkrescue`
+# On macOS (Homebrew i686-elf-grub) it is often `i686-elf-grub-mkrescue`
+GRUB_MKRESCUE ?= $(shell command -v grub-mkrescue 2>/dev/null || command -v i686-elf-grub-mkrescue 2>/dev/null)
 
 CFLAGS  := -std=c11 -ffreestanding -O2 -Wall -Wextra -Werror \
-           -fno-stack-protector -fno-pic -fno-pie -m32 \
-           -DKERNEL_TEST_TRAP=$(TEST_TRAP)
+           -fno-stack-protector -fno-pic -fno-pie -m32
 LDFLAGS := -T linker.ld -nostdlib
 
 BUILD   := build
@@ -17,21 +18,18 @@ ISO_DIR := iso
 KERNEL  := $(BUILD)/kernel.elf
 ISO     := $(BUILD)/eee-os.iso
 
-SRC_C   := src/kernel.c \
-           src/console.c \
-           src/panic.c \
-           src/idt.c
-SRC_S   := src/boot.s \
-           src/isr.s
-OBJ_C   := $(SRC_C:src/%.c=$(BUILD)/%.o)
-OBJ_S   := $(SRC_S:src/%.s=$(BUILD)/%.o)
+# Build everything in src/ (prevents future merge pain)
+SRC_C   := $(wildcard src/*.c)
+SRC_S   := $(wildcard src/*.s)
+OBJ_C   := $(patsubst src/%.c,$(BUILD)/%.o,$(SRC_C))
+OBJ_S   := $(patsubst src/%.s,$(BUILD)/%.o,$(SRC_S))
 
 .PHONY: all iso run run-headless clean check-tools
 
 all: iso
 
 check-tools:
-	@command -v grub-mkrescue >/dev/null || (echo "Missing: grub-mkrescue" && exit 1)
+	@command -v "$(GRUB_MKRESCUE)" >/dev/null || (echo "Missing: grub-mkrescue (Linux) or i686-elf-grub-mkrescue (macOS Homebrew i686-elf-grub)" && exit 1)
 	@command -v xorriso >/dev/null || (echo "Missing: xorriso" && exit 1)
 	@command -v qemu-system-i386 >/dev/null || (echo "Missing: qemu-system-i386" && exit 1)
 
@@ -52,7 +50,7 @@ iso: check-tools $(KERNEL)
 	mkdir -p $(ISO_DIR)/boot
 	cp $(KERNEL) $(ISO_DIR)/boot/kernel.elf
 	mkdir -p $(BUILD)
-	grub-mkrescue -o $(ISO) $(ISO_DIR) >/dev/null
+	"$(GRUB_MKRESCUE)" -o $(ISO) $(ISO_DIR) >/dev/null
 	@echo "Built ISO: $(ISO)"
 
 run: iso
