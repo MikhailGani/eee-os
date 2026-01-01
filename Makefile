@@ -5,6 +5,9 @@ CC      := $(PREFIX)i686-elf-gcc
 AS      := $(PREFIX)i686-elf-as
 LD      := $(PREFIX)i686-elf-ld
 
+# GRUB mkrescue binary name differs across platforms (macOS Homebrew often uses i686-elf-grub-mkrescue)
+GRUB_MKRESCUE ?= grub-mkrescue
+
 CFLAGS  := -std=c11 -ffreestanding -O2 -Wall -Wextra -Werror \
            -fno-stack-protector -fno-pic -fno-pie -m32
 LDFLAGS := -T linker.ld -nostdlib
@@ -24,9 +27,10 @@ OBJ_S   := $(BUILD)/boot.o
 all: iso
 
 check-tools:
-	@command -v grub-mkrescue >/dev/null || (echo "Missing: grub-mkrescue" && exit 1)
-	@command -v xorriso >/dev/null || (echo "Missing: xorriso" && exit 1)
-	@command -v qemu-system-i386 >/dev/null || (echo "Missing: qemu-system-i386" && exit 1)
+	@command -v $(GRUB_MKRESCUE) >/dev/null || (echo "Missing: $(GRUB_MKRESCUE) (try: brew install i686-elf-grub)" && exit 1)
+	@command -v xorriso >/dev/null || (echo "Missing: xorriso (try: brew install xorriso)" && exit 1)
+	@command -v qemu-system-i386 >/dev/null || (echo "Missing: qemu-system-i386 (try: brew install qemu)" && exit 1)
+
 
 $(BUILD):
 	mkdir -p $(BUILD)
@@ -45,8 +49,9 @@ iso: check-tools $(KERNEL)
 	mkdir -p $(ISO_DIR)/boot
 	cp $(KERNEL) $(ISO_DIR)/boot/kernel.elf
 	mkdir -p $(BUILD)
-	grub-mkrescue -o $(ISO) $(ISO_DIR) >/dev/null
+	$(GRUB_MKRESCUE) -o $(ISO) $(ISO_DIR) >/dev/null
 	@echo "Built ISO: $(ISO)"
+
 
 run: iso
 	qemu-system-i386 -cdrom $(ISO) -m 256M -no-reboot -no-shutdown
