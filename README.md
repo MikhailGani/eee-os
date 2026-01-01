@@ -11,10 +11,13 @@ You need tools that can build a GRUB ISO:
 - a C toolchain that can build freestanding i686 code
 
 On Linux (recommended for ISO building):
-- Debian/Ubuntu: `sudo apt-get install grub-pc-bin xorriso qemu-system-x86 make`
+- Debian/Ubuntu (GRUB + ISO tooling): `sudo apt-get install grub-pc-bin xorriso qemu-system-x86 make`
 
 Cross compiler (recommended):
 - `i686-elf-gcc` + `i686-elf-ld` + `i686-elf-as`
+
+If `make iso` fails with `Missing: grub-mkrescue`, install `grub-pc-bin`:
+- Debian/Ubuntu: `sudo apt-get install grub-pc-bin`
 
 ## Build
 - `make iso`
