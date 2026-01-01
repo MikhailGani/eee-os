@@ -1,9 +1,9 @@
 #include "idt.h"
 
-#include "console.h"
 #include "panic.h"
 
 #include <stddef.h>
+#include <stdint.h>
 
 struct idt_entry {
     uint16_t base_lo;
@@ -106,34 +106,6 @@ void idt_init(void) {
     __asm__ __volatile__("lidt %0" : : "m"(idt_descriptor));
 }
 
-static void console_print_dec(uint32_t value) {
-    char buf[11];
-    size_t i = 0;
-
-    if (value == 0) {
-        console_putc('0');
-        return;
-    }
-
-    while (value > 0 && i < sizeof(buf)) {
-        buf[i++] = (char)('0' + (value % 10));
-        value /= 10;
-    }
-
-    while (i > 0) {
-        console_putc(buf[--i]);
-    }
-}
-
-static void console_print_hex(uint32_t value) {
-    static const char hex[] = "0123456789ABCDEF";
-    console_print("0x");
-    for (int i = 7; i >= 0; i--) {
-        uint8_t nibble = (uint8_t)((value >> (i * 4)) & 0xF);
-        console_putc(hex[nibble]);
-    }
-}
-
 static int has_error_code(uint32_t vector) {
     switch (vector) {
         case 8:
@@ -149,13 +121,61 @@ static int has_error_code(uint32_t vector) {
     }
 }
 
-void isr_handler(uint32_t vector, uint32_t error_code) {
-    console_print("PANIC: exception ");
-    console_print_dec(vector);
-    if (has_error_code(vector)) {
-        console_print(" error ");
-        console_print_hex(error_code);
+static void append_str(char *buf, size_t *offset, size_t max, const char *s) {
+    while (*s && *offset + 1 < max) {
+        buf[*offset] = *s;
+        (*offset)++;
+        s++;
     }
-    console_print("\n");
-    panic("CPU halted");
+}
+
+static void append_dec(char *buf, size_t *offset, size_t max, uint32_t value) {
+    char tmp[11];
+    size_t len = 0;
+
+    if (value == 0) {
+        if (*offset + 1 < max) {
+            buf[*offset] = '0';
+            (*offset)++;
+        }
+        return;
+    }
+
+    while (value > 0 && len < sizeof(tmp)) {
+        tmp[len++] = (char)('0' + (value % 10));
+        value /= 10;
+    }
+
+    while (len > 0 && *offset + 1 < max) {
+        buf[*offset] = tmp[--len];
+        (*offset)++;
+    }
+}
+
+static void append_hex(char *buf, size_t *offset, size_t max, uint32_t value) {
+    static const char hex[] = "0123456789ABCDEF";
+    append_str(buf, offset, max, "0x");
+    for (int i = 7; i >= 0; i--) {
+        uint8_t nibble = (uint8_t)((value >> (i * 4)) & 0xF);
+        if (*offset + 1 >= max) {
+            return;
+        }
+        buf[*offset] = hex[nibble];
+        (*offset)++;
+    }
+}
+
+void isr_handler(uint32_t vector, uint32_t error_code) {
+    char message[64];
+    size_t offset = 0;
+
+    append_str(message, &offset, sizeof(message), "Exception ");
+    append_dec(message, &offset, sizeof(message), vector);
+    if (has_error_code(vector)) {
+        append_str(message, &offset, sizeof(message), " error ");
+        append_hex(message, &offset, sizeof(message), error_code);
+    }
+    message[offset] = '\0';
+
+    panic(message);
 }

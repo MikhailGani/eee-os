@@ -13,6 +13,10 @@ CFLAGS  := -std=c11 -ffreestanding -O2 -Wall -Wextra -Werror \
            -fno-stack-protector -fno-pic -fno-pie -m32
 LDFLAGS := -T linker.ld -nostdlib
 
+ifdef TEST_TRAP
+CFLAGS += -DKERNEL_TEST_TRAP
+endif
+
 BUILD   := build
 ISO_DIR := iso
 KERNEL  := $(BUILD)/kernel.elf
@@ -29,9 +33,9 @@ OBJ_S   := $(patsubst src/%.s,$(BUILD)/%.o,$(SRC_S))
 all: iso
 
 check-tools:
-	@command -v "$(GRUB_MKRESCUE)" >/dev/null || (echo "Missing: grub-mkrescue (Linux) or i686-elf-grub-mkrescue (macOS Homebrew i686-elf-grub)" && exit 1)
-	@command -v xorriso >/dev/null || (echo "Missing: xorriso" && exit 1)
-	@command -v qemu-system-i386 >/dev/null || (echo "Missing: qemu-system-i386" && exit 1)
+	@command -v "$(GRUB_MKRESCUE)" >/dev/null || (echo "Missing: grub-mkrescue (Linux) or i686-elf-grub-mkrescue (macOS Homebrew i686-elf-grub). Install grub-pc-bin + xorriso (Ubuntu/Debian) or i686-elf-grub (Homebrew)." && exit 1)
+	@command -v xorriso >/dev/null || (echo "Missing: xorriso (Ubuntu/Debian: apt-get install xorriso)" && exit 1)
+	@command -v qemu-system-i386 >/dev/null || (echo "Missing: qemu-system-i386 (Ubuntu/Debian: apt-get install qemu-system-x86)" && exit 1)
 
 $(BUILD):
 	mkdir -p $(BUILD)

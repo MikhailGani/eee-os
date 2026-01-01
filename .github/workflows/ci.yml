@@ -1,11 +1,11 @@
-name: ci
+name: CI
 
 on:
   push:
   pull_request:
 
 jobs:
-  build:
+  build-and-run:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -14,22 +14,13 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            grub-pc-bin \
-            xorriso \
-            qemu-system-x86 \
-            make \
-            gcc-i686-linux-gnu \
-            binutils-i686-linux-gnu
-          sudo ln -sf /usr/bin/i686-linux-gnu-gcc /usr/local/bin/i686-elf-gcc
-          sudo ln -sf /usr/bin/i686-linux-gnu-as /usr/local/bin/i686-elf-as
-          sudo ln -sf /usr/bin/i686-linux-gnu-ld /usr/local/bin/i686-elf-ld
+          sudo apt-get install -y grub-pc-bin xorriso qemu-system-x86 make
 
       - name: Build ISO
         run: make iso
 
-      - name: Run headless and check serial output
+      - name: Run headless and verify serial output
         run: |
-          set -euo pipefail
-          timeout 5s make run-headless | tee qemu.log || true
+          timeout 10s make run-headless > qemu.log 2>&1 || true
+          cat qemu.log
           grep -q "EEE-OS booted" qemu.log
