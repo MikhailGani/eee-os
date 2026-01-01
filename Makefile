@@ -51,5 +51,8 @@ iso: check-tools $(KERNEL)
 run: iso
 	qemu-system-i386 -cdrom $(ISO) -m 256M -no-reboot -no-shutdown
 
+run-headless: iso
+	qemu-system-i386 -cdrom $(ISO) -m 256M -nographic -serial mon:stdio -no-reboot -no-shutdown
+
 clean:
 	rm -rf $(BUILD) $(ISO_DIR)/boot/kernel.elf

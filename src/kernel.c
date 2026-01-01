@@ -6,6 +6,39 @@ static size_t vga_row = 0;
 static size_t vga_col = 0;
 static uint8_t vga_color = 0x0F; // white on black
 
+static inline void outb(uint16_t port, uint8_t value) {
+    __asm__ __volatile__("outb %0, %1" : : "a"(value), "Nd"(port));
+}
+
+static inline uint8_t inb(uint16_t port) {
+    uint8_t value;
+    __asm__ __volatile__("inb %1, %0" : "=a"(value) : "Nd"(port));
+    return value;
+}
+
+static void serial_init(void) {
+    const uint16_t com1 = 0x3F8;
+    outb(com1 + 1, 0x00); // Disable interrupts
+    outb(com1 + 3, 0x80); // Enable DLAB
+    outb(com1 + 0, 0x01); // Divisor low (115200 baud)
+    outb(com1 + 1, 0x00); // Divisor high
+    outb(com1 + 3, 0x03); // 8 bits, no parity, one stop bit
+    outb(com1 + 2, 0xC7); // Enable FIFO, clear, 14-byte threshold
+    outb(com1 + 4, 0x0B); // IRQs enabled, RTS/DSR set
+}
+
+static void serial_putc(char c) {
+    const uint16_t com1 = 0x3F8;
+    while ((inb(com1 + 5) & 0x20) == 0) {
+        __asm__ __volatile__("pause");
+    }
+    outb(com1, (uint8_t)c);
+}
+
+static void serial_print(const char* s) {
+    for (; *s; s++) serial_putc(*s);
+}
+
 static void vga_putc(char c) {
     if (c == '\n') {
         vga_col = 0;
@@ -41,8 +74,10 @@ void kmain(uint32_t mb_magic, uint32_t mb_info_ptr) {
     }
     vga_row = 0;
     vga_col = 0;
+    serial_init();
 
     vga_print("EEE-OS booted\n");
+    serial_print("EEE-OS booted\n");
     vga_print("multiboot magic: ");
     vga_print_hex(mb_magic);
     vga_print("\nmultiboot info:  ");
