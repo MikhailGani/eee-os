@@ -17,6 +17,10 @@ ifdef TEST_TRAP
 CFLAGS += -DKERNEL_TEST_TRAP
 endif
 
+ifdef POLL
+CFLAGS += -DKBD_POLL=1
+endif
+
 BUILD   := build
 ISO_DIR := iso
 KERNEL  := $(BUILD)/kernel.elf
