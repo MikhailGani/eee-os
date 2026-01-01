@@ -48,6 +48,26 @@ void console_set_serial_enabled(bool enabled) {
 }
 
 void console_putc(char c) {
+    if (c == '\b') {
+        if (vga_col == 0 && vga_row == 0) {
+            return;
+        }
+        if (vga_col == 0) {
+            vga_row--;
+            vga_col = 79;
+        } else {
+            vga_col--;
+        }
+        const size_t idx = vga_row * 80 + vga_col;
+        VGA[idx] = (uint16_t)' ' | ((uint16_t)vga_color << 8);
+        if (serial_enabled) {
+            serial_putc('\b');
+            serial_putc(' ');
+            serial_putc('\b');
+        }
+        return;
+    }
+
     if (c == '\n') {
         vga_col = 0;
         vga_row++;
