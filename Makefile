@@ -5,8 +5,9 @@ CC      := $(PREFIX)i686-elf-gcc
 AS      := $(PREFIX)i686-elf-as
 LD      := $(PREFIX)i686-elf-ld
 
-# GRUB mkrescue binary name differs across platforms (macOS Homebrew often uses i686-elf-grub-mkrescue)
-GRUB_MKRESCUE ?= grub-mkrescue
+# On Linux this is usually `grub-mkrescue`
+# On macOS (Homebrew i686-elf-grub) it is often `i686-elf-grub-mkrescue`
+GRUB_MKRESCUE ?= $(shell command -v grub-mkrescue 2>/dev/null || command -v i686-elf-grub-mkrescue 2>/dev/null)
 
 CFLAGS  := -std=c11 -ffreestanding -O2 -Wall -Wextra -Werror \
            -fno-stack-protector -fno-pic -fno-pie -m32
@@ -17,28 +18,28 @@ ISO_DIR := iso
 KERNEL  := $(BUILD)/kernel.elf
 ISO     := $(BUILD)/eee-os.iso
 
-SRC_C   := src/kernel.c
-SRC_S   := src/boot.s
-OBJ_C   := $(BUILD)/kernel.o
-OBJ_S   := $(BUILD)/boot.o
+# Build everything in src/ (prevents future merge pain)
+SRC_C   := $(wildcard src/*.c)
+SRC_S   := $(wildcard src/*.s)
+OBJ_C   := $(patsubst src/%.c,$(BUILD)/%.o,$(SRC_C))
+OBJ_S   := $(patsubst src/%.s,$(BUILD)/%.o,$(SRC_S))
 
-.PHONY: all iso run clean check-tools
+.PHONY: all iso run run-headless clean check-tools
 
 all: iso
 
 check-tools:
-	@command -v $(GRUB_MKRESCUE) >/dev/null || (echo "Missing: $(GRUB_MKRESCUE) (try: brew install i686-elf-grub)" && exit 1)
-	@command -v xorriso >/dev/null || (echo "Missing: xorriso (try: brew install xorriso)" && exit 1)
-	@command -v qemu-system-i386 >/dev/null || (echo "Missing: qemu-system-i386 (try: brew install qemu)" && exit 1)
-
+	@command -v "$(GRUB_MKRESCUE)" >/dev/null || (echo "Missing: grub-mkrescue (Linux) or i686-elf-grub-mkrescue (macOS Homebrew i686-elf-grub)" && exit 1)
+	@command -v xorriso >/dev/null || (echo "Missing: xorriso" && exit 1)
+	@command -v qemu-system-i386 >/dev/null || (echo "Missing: qemu-system-i386" && exit 1)
 
 $(BUILD):
 	mkdir -p $(BUILD)
 
-$(OBJ_S): $(SRC_S) | $(BUILD)
+$(BUILD)/%.o: src/%.s | $(BUILD)
 	$(AS) --32 $< -o $@
 
-$(OBJ_C): $(SRC_C) | $(BUILD)
+$(BUILD)/%.o: src/%.c | $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(KERNEL): $(OBJ_S) $(OBJ_C)
@@ -49,9 +50,8 @@ iso: check-tools $(KERNEL)
 	mkdir -p $(ISO_DIR)/boot
 	cp $(KERNEL) $(ISO_DIR)/boot/kernel.elf
 	mkdir -p $(BUILD)
-	$(GRUB_MKRESCUE) -o $(ISO) $(ISO_DIR) >/dev/null
+	"$(GRUB_MKRESCUE)" -o $(ISO) $(ISO_DIR) >/dev/null
 	@echo "Built ISO: $(ISO)"
-
 
 run: iso
 	qemu-system-i386 -cdrom $(ISO) -m 256M -no-reboot -no-shutdown
