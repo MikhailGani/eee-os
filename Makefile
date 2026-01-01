@@ -5,8 +5,11 @@ CC      := $(PREFIX)i686-elf-gcc
 AS      := $(PREFIX)i686-elf-as
 LD      := $(PREFIX)i686-elf-ld
 
+TEST_TRAP ?= 0
+
 CFLAGS  := -std=c11 -ffreestanding -O2 -Wall -Wextra -Werror \
-           -fno-stack-protector -fno-pic -fno-pie -m32
+           -fno-stack-protector -fno-pic -fno-pie -m32 \
+           -DKERNEL_TEST_TRAP=$(TEST_TRAP)
 LDFLAGS := -T linker.ld -nostdlib
 
 BUILD   := build
@@ -14,12 +17,16 @@ ISO_DIR := iso
 KERNEL  := $(BUILD)/kernel.elf
 ISO     := $(BUILD)/eee-os.iso
 
-SRC_C   := src/kernel.c
-SRC_S   := src/boot.s
-OBJ_C   := $(BUILD)/kernel.o
-OBJ_S   := $(BUILD)/boot.o
+SRC_C   := src/kernel.c \
+           src/console.c \
+           src/panic.c \
+           src/idt.c
+SRC_S   := src/boot.s \
+           src/isr.s
+OBJ_C   := $(SRC_C:src/%.c=$(BUILD)/%.o)
+OBJ_S   := $(SRC_S:src/%.s=$(BUILD)/%.o)
 
-.PHONY: all iso run clean check-tools
+.PHONY: all iso run run-headless clean check-tools
 
 all: iso
 
@@ -31,10 +38,10 @@ check-tools:
 $(BUILD):
 	mkdir -p $(BUILD)
 
-$(OBJ_S): $(SRC_S) | $(BUILD)
+$(BUILD)/%.o: src/%.s | $(BUILD)
 	$(AS) --32 $< -o $@
 
-$(OBJ_C): $(SRC_C) | $(BUILD)
+$(BUILD)/%.o: src/%.c | $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(KERNEL): $(OBJ_S) $(OBJ_C)
@@ -50,6 +57,9 @@ iso: check-tools $(KERNEL)
 
 run: iso
 	qemu-system-i386 -cdrom $(ISO) -m 256M -no-reboot -no-shutdown
+
+run-headless: iso
+	qemu-system-i386 -cdrom $(ISO) -m 256M -nographic -serial mon:stdio -no-reboot -no-shutdown
 
 clean:
 	rm -rf $(BUILD) $(ISO_DIR)/boot/kernel.elf
