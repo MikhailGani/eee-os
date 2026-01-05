@@ -1,5 +1,5 @@
-#ifndef IO_H
-#define IO_H
+#ifndef GANIOS_ARCH_X86_IO_H
+#define GANIOS_ARCH_X86_IO_H
 
 #include <stdint.h>
 
