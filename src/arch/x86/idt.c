@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "arch/x86/isr.h"
+#include "arch/x86/irq.h"
 
 #define IDT_ENTRIES 256
 #define IDT_FLAG_PRESENT 0x80
@@ -89,6 +90,7 @@ void idt_init(void) {
     idt_set_gate(29, isr29, selector, flags);
     idt_set_gate(30, isr30, selector, flags);
     idt_set_gate(31, isr31, selector, flags);
+    idt_set_gate(32, irq0, selector, flags);
 
     idt_load();
 }

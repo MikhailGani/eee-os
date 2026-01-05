@@ -28,6 +28,14 @@ void vga_putc(char c) {
         vga_newline();
         return;
     }
+    if (c == '\b') {
+        if (vga_col > 0) {
+            vga_col--;
+            const size_t idx = vga_row * 80 + vga_col;
+            VGA[idx] = (uint16_t)' ' | ((uint16_t)vga_color << 8);
+        }
+        return;
+    }
 
     const size_t idx = vga_row * 80 + vga_col;
     VGA[idx] = (uint16_t)c | ((uint16_t)vga_color << 8);
