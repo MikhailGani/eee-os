@@ -10,6 +10,7 @@ LD      := $(PREFIX)i686-elf-ld
 GRUB_MKRESCUE ?= $(shell command -v grub-mkrescue 2>/dev/null || command -v i686-elf-grub-mkrescue 2>/dev/null)
 
 CFLAGS  := -std=c11 -ffreestanding -O2 -Wall -Wextra -Werror \
+           -Isrc \
            -fno-stack-protector -fno-pic -fno-pie -m32
 LDFLAGS := -T linker.ld -nostdlib
 
