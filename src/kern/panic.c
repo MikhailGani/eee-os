@@ -1,11 +1,11 @@
 #include "panic.h"
 
-#include "console.h"
+#include "log.h"
 
 void panic(const char *msg) {
-    console_print("PANIC: ");
-    console_print(msg);
-    console_print("\n");
+    kputs("PANIC: ");
+    kputs(msg);
+    kputs("\n");
 
     __asm__ __volatile__("cli");
     for (;;) {
