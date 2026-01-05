@@ -21,6 +21,7 @@ static void halt_forever(void) {
 }
 
 void isr_exception_handler(struct regs *r) {
+    /* Minimal handler to avoid faults during exception processing. */
     if (r->int_no == 8) {
         kputs("EXC 8 err=0x");
         print_hex32(r->err_code);
