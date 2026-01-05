@@ -1,5 +1,5 @@
-#ifndef SERIAL_H
-#define SERIAL_H
+#ifndef GANIOS_DRIVERS_SERIAL_H
+#define GANIOS_DRIVERS_SERIAL_H
 
 #include <stdbool.h>
 
