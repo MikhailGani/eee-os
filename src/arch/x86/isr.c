@@ -75,7 +75,6 @@ static void halt_forever(void) {
 }
 
 void isr_exception_handler(struct regs *r) {
-    // Hard stop for #DF to avoid cascading faults.
     if (r->int_no == 8) {
         kputs("EXC 8 Double Fault\n");
         halt_forever();
